@@ -12,7 +12,7 @@
 <script type="text/javascript">
 
 // prediction params
-var sample_softmax_temperature = 1.0; // how peaky model predictions should be
+var sample_softmax_temperature = 0.87; // how peaky model predictions should be
 var max_chars_gen = 140; // max length of generated sentences
 
 // various global var inits
@@ -309,45 +309,23 @@ var tick = function() {
     }
   }
   if(tick_iter % 10 === 0) {
-    // draw argmax prediction
-    $('#argmax').html('');
-    var pred = predictSentence(model, false);
-    var pred_div = '<div class="apred">'+pred+'</div>'
-    $('#argmax').append(pred_div);
-    // keep track of perplexity
     perplexity = cost_struct.ppl.toFixed(2));
   }
 }
 
 var iid = null;
+
+reinit();
+if(iid !== null) { clearInterval(iid); }
+iid = setInterval(tick, 0); 
 $(function() {
 
-  // attach button handlers
-  $('#learn').click(function(){ 
-    reinit();
-    if(iid !== null) { clearInterval(iid); }
-    iid = setInterval(tick, 0); 
-  });
 
   $("#loadmodel").click(function(){
-    var j = JSON.parse(); //PATH TO JSON FILE
+    var j = JSON.parse(); //PATH TO JSON DEF OF NETWORK
     loadModel(j);
   });
 
-  $("#learn").click(); // simulate click on startup
-
-  //$('#gradcheck').click(gradCheck);
-
-  $("#temperature_slider").slider({
-    min: -1,
-    max: 1.05,
-    step: 0.05,
-    value: 0,
-    slide: function( event, ui ) {
-      sample_softmax_temperature = Math.pow(10, ui.value);
-      $("#temperature_text").text( sample_softmax_temperature.toFixed(2) );
-    }
-  });
 });
 
 </script>
@@ -362,29 +340,10 @@ Source data goes here.
   </div>
   <div id="prepro_status"></div>
 
-  <div class="hh">Controls/Options:</div>
-  <button id="learn" class="abutton">learn/restart</button>
-  protip: if your perplexity is exploding with Infinity try lowering the initial learning rate
   <br>
   <div id="status">
 
-    <div>
-      <div class="hh">Training stats:</div>
-
-      <div style="clear:both;"></div>
-    </div>
-
-    <div class="hh">Model samples:</div>
-    <div id="controls">
-      <div class="aslider">
-        <div class="slider_header">Softmax sample temperature: lower setting will generate more likely predictions, but you'll see more of the same common words again and again. Higher setting will generate less frequent words but you might see more spelling errors.</div>
-        <div class="theslider" id="temperature_slider"></div>
-        <div class="slider_value" id="temperature_text"></div>
-      </div>
-    </div>
     <div id="samples"></div>
-    <div class="hh">Greedy argmax prediction:</div>
-    <div id="argmax"></div>
   </div>
 
 </div>
