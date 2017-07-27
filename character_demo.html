@@ -2,74 +2,6 @@
 <head>
 <title>RecurrentJS Sentence Memorization Demo</title>
 
-<style>
-body {
-  font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
-  color: #333;
-  padding: 20px;
-}
-#argmax {
-  background-color: #DFD;
-}
-#ppl {
-  color: #090;
-  font-size: 20px;
-}
-#epoch {
-  color: #900;
-  font-size: 20px;
-}
-.apred {
-  padding: 2px;
-  margin: 5px;
-  overflow: hidden;
-  height: 20px;
-  font-size: 14px;
-}
-#prepro_status {
-  background-color: #FFD;
-  padding: 5px;
-}
-#status {
-  padding: 2px;
-  margin-top: 5px;
-}
-#controls {
-  margin: 5px;
-}
-.theslider {
-  width:90%;
-  display: inline-block;
-}
-.slider_value {
-  width: 9%;
-  display: inline-block;
-}
-#wrap {
-  width: 800px;
-  margin-right: auto;
-  margin-left: auto;
-  margin-bottom: 200px;
-}
-.abutton {
-  width: 120px;
-  height: 30px;
-  margin: 10px 10px 10px 0px;
-}
-.hh {
-  background-color: #EEE;
-  padding: 5px;
-  margin-top: 5px;
-  border-bottom: 1px solid #999;
-  margin-bottom: 2px;
-}
-#pplgraph {
-  float: right;
-}
-#intro {
-  text-align: justify;
-}
-</style>
 <link href="external/jquery-ui.min.css" rel="stylesheet">
 
 <script src="external/jquery-1.8.3.min.js"></script>
@@ -82,7 +14,7 @@ body {
 
 // prediction params
 var sample_softmax_temperature = 1.0; // how peaky model predictions should be
-var max_chars_gen = 100; // max length of generated sentences
+var max_chars_gen = 140; // max length of generated sentences
 
 // various global var inits
 var epoch_size = -1;
@@ -93,7 +25,6 @@ var indexToLetter = {};
 var vocab = [];
 var data_sents = [];
 var solver = new R.Solver(); // should be class because it needs memory for step caches
-var pplGraph = new Rvis.Graph();
 
 var model = {};
 
@@ -186,7 +117,6 @@ var reinit = function() {
   reinit_learning_rate_slider();
 
   solver = new R.Solver(); // reinit solver
-  pplGraph = new Rvis.Graph();
 
   ppl_list = [];
   tick_iter = 0;
@@ -404,13 +334,6 @@ var tick = function() {
     $('#epoch').text('epoch: ' + (tick_iter/epoch_size).toFixed(2));
     $('#ppl').text('perplexity: ' + cost_struct.ppl.toFixed(2));
     $('#ticktime').text('forw/bwd time per example: ' + tick_time.toFixed(1) + 'ms');
-
-    if(tick_iter % 100 === 0) {
-      var median_ppl = median(ppl_list);
-      ppl_list = [];
-      pplGraph.add(tick_iter, median_ppl);
-      pplGraph.drawSelf(document.getElementById("pplgraph"));
-    }
   }
 }
 
@@ -463,9 +386,8 @@ $(function() {
     }
   });
 
-  $("#savemodel").click(saveModel);
   $("#loadmodel").click(function(){
-    var j = JSON.parse($("#tio").val());
+    var j = JSON.parse(); //PATH TO JSON FILE
     loadModel(j);
   });
 
@@ -529,7 +451,6 @@ clipval = 5.0; // clip gradients at this value
         <div class="slider_value" id="lr_text"></div>
       </div>
 
-      <canvas id="pplgraph"></canvas>
       <div id="ticktime"></div>
       <div id="gradclip"></div>
       <div id="epoch"></div>
@@ -550,19 +471,7 @@ clipval = 5.0; // clip gradients at this value
     <div class="hh">Greedy argmax prediction:</div>
     <div id="argmax"></div>
   </div>
-  <div id="io">
-    <div class="hh">I/O save/load model JSON</div>
 
-    <button id="savemodel" class="abutton">save model</button>
-    <button id="loadmodel" class="abutton">load model</button>
-    <div>
-      You can save or load models with JSON using the textarea below.
-    </div>
-    <textarea style="width:100%; height:200px;" id="tio"></textarea>
-
-    <br>
-
-  </div>
 </div>
 
 </body>
