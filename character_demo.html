@@ -1,8 +1,5 @@
 <html>
 <head>
-<title>RecurrentJS Sentence Memorization Demo</title>
-
-<link href="external/jquery-ui.min.css" rel="stylesheet">
 
 <script src="external/jquery-1.8.3.min.js"></script>
 <script src="external/jquery-ui.min.js"></script>
@@ -26,6 +23,15 @@ var data_sents = [];
 var solver = new R.Solver(); // should be class because it needs memory for step caches
 
 var model = {};
+
+var hidden_sizes = [50,50]; // list of sizes of hidden layers
+var letter_size = 5; // size of letter embeddings
+
+// optimization
+var regc = 0.000001; // L2 regularization strength
+var learning_rate = 0.01; // learning rate
+var clipval = 5.0; // clip gradients at this value
+  
   
 var perplexity = -1;
 
@@ -90,16 +96,7 @@ var initModel = function() {
 
 var reinit = function() { //This should happen FIRST.
   // note: reinit writes global vars
-  
-  // model parameters
-hidden_sizes = [50,50]; // list of sizes of hidden layers
-letter_size = 5; // size of letter embeddings
 
-// optimization
-regc = 0.000001; // L2 regularization strength
-learning_rate = 0.01; // learning rate
-clipval = 5.0; // clip gradients at this value
-  
   solver = new R.Solver(); // reinit solver
 
   ppl_list = [];
