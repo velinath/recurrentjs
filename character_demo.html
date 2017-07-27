@@ -107,11 +107,18 @@ var reinit_learning_rate_slider = function() {
   $("#lr_text").text(learning_rate.toFixed(5));
 }
 
-var reinit = function() {
+var reinit = function() { //This kicks off the NN processing! This is where we should be _starting_ - 
   // note: reinit writes global vars
   
-  // eval options to set some globals
-  eval($("#newnet").val());
+  // model parameters
+generator = 'lstm'; // can be 'rnn' or 'lstm'
+hidden_sizes = [50,50]; // list of sizes of hidden layers
+letter_size = 5; // size of letter embeddings
+
+// optimization
+regc = 0.000001; // L2 regularization strength
+learning_rate = 0.01; // learning rate
+clipval = 5.0; // clip gradients at this value
 
   reinit_learning_rate_slider();
 
@@ -426,18 +433,6 @@ Source data goes here.
   <button id="resume" class="abutton">resume</button>
   <button id="stop" class="abutton">pause</button>
   <!-- <button id="gradcheck">gradcheck</button> -->
-  <textarea id="newnet" style="width:100%; height:200px;">
-
-// model parameters
-generator = 'lstm'; // can be 'rnn' or 'lstm'
-hidden_sizes = [50,50]; // list of sizes of hidden layers
-letter_size = 5; // size of letter embeddings
-
-// optimization
-regc = 0.000001; // L2 regularization strength
-learning_rate = 0.01; // learning rate
-clipval = 5.0; // clip gradients at this value
-  </textarea><br />
   protip: if your perplexity is exploding with Infinity try lowering the initial learning rate
   <br>
   <div id="status">
