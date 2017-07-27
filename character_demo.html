@@ -26,6 +26,8 @@ var data_sents = [];
 var solver = new R.Solver(); // should be class because it needs memory for step caches
 
 var model = {};
+  
+var perplexity = -1;
 
 var initVocab = function(sents, count_threshold) {
   // go over all characters and keep track of all unique ones seen
@@ -79,39 +81,17 @@ var initModel = function() {
   // letter embedding vectors
   var model = {};
   model['Wil'] = new R.RandMat(input_size, letter_size , 0, 0.08);
-  
-  if(generator === 'rnn') {
-    var rnn = R.initRNN(letter_size, hidden_sizes, output_size);
-    utilAddToModel(model, rnn);
-  } else {
     var lstm = R.initLSTM(letter_size, hidden_sizes, output_size);
     utilAddToModel(model, lstm);
-  }
 
   return model;
 }
 
-var reinit_learning_rate_slider = function() {
-  // init learning rate slider for controlling the decay
-  // note that learning_rate is a global variable
-  $("#lr_slider").slider({
-    min: Math.log10(0.01) - 3.0,
-    max: Math.log10(0.01) + 0.05,
-    step: 0.05,
-    value: Math.log10(learning_rate),
-    slide: function( event, ui ) {
-      learning_rate = Math.pow(10, ui.value);
-      $("#lr_text").text(learning_rate.toFixed(5));
-    }
-  });
-  $("#lr_text").text(learning_rate.toFixed(5));
-}
 
-var reinit = function() { //This kicks off the NN processing! This is where we should be _starting_ - 
+var reinit = function() { //This should happen FIRST.
   // note: reinit writes global vars
   
   // model parameters
-generator = 'lstm'; // can be 'rnn' or 'lstm'
 hidden_sizes = [50,50]; // list of sizes of hidden layers
 letter_size = 5; // size of letter embeddings
 
@@ -119,9 +99,7 @@ letter_size = 5; // size of letter embeddings
 regc = 0.000001; // L2 regularization strength
 learning_rate = 0.01; // learning rate
 clipval = 5.0; // clip gradients at this value
-
-  reinit_learning_rate_slider();
-
+  
   solver = new R.Solver(); // reinit solver
 
   ppl_list = [];
@@ -311,15 +289,16 @@ var tick = function() {
   cost_struct.G.backward();
   // perform param update
   var solver_stats = solver.step(model, learning_rate, regc, clipval);
-  //$("#gradclip").text('grad clipped ratio: ' + solver_stats.ratio_clipped)
 
   var t1 = +new Date();
   var tick_time = t1 - t0;
 
   ppl_list.push(cost_struct.ppl); // keep track of perplexity
+  
 
   // evaluate now and then
   tick_iter += 1;
+  learning_rate = learning_rate * 1 / (1 + 0.001 / (tick_iter/epoch_size)) //update learning rate based on epoch
   if(tick_iter % 50 === 0) {
     // draw samples
     $('#samples').html('');
@@ -335,41 +314,8 @@ var tick = function() {
     var pred = predictSentence(model, false);
     var pred_div = '<div class="apred">'+pred+'</div>'
     $('#argmax').append(pred_div);
-
     // keep track of perplexity
-    $('#epoch').text('epoch: ' + (tick_iter/epoch_size).toFixed(2));
-    $('#ppl').text('perplexity: ' + cost_struct.ppl.toFixed(2));
-    $('#ticktime').text('forw/bwd time per example: ' + tick_time.toFixed(1) + 'ms');
-  }
-}
-
-var gradCheck = function() {
-  var model = initModel();
-  var sent = '^test sentence$';
-  var cost_struct = costfun(model, sent);
-  cost_struct.G.backward();
-  var eps = 0.000001;
-
-  for(var k in model) {
-    if(model.hasOwnProperty(k)) {
-      var m = model[k]; // mat ref
-      for(var i=0,n=m.w.length;i<n;i++) {
-        
-        oldval = m.w[i];
-        m.w[i] = oldval + eps;
-        var c0 = costfun(model, sent);
-        m.w[i] = oldval - eps;
-        var c1 = costfun(model, sent);
-        m.w[i] = oldval;
-
-        var gnum = (c0.cost - c1.cost)/(2 * eps);
-        var ganal = m.dw[i];
-        var relerr = (gnum - ganal)/(Math.abs(gnum) + Math.abs(ganal));
-        if(relerr > 1e-1) {
-          console.log(k + ': numeric: ' + gnum + ', analytic: ' + ganal + ', err: ' + relerr);
-        }
-      }
-    }
+    perplexity = cost_struct.ppl.toFixed(2));
   }
 }
 
@@ -381,15 +327,6 @@ $(function() {
     reinit();
     if(iid !== null) { clearInterval(iid); }
     iid = setInterval(tick, 0); 
-  });
-  $('#stop').click(function(){ 
-    if(iid !== null) { clearInterval(iid); }
-    iid = null;
-  });
-  $("#resume").click(function(){
-    if(iid === null) {
-      iid = setInterval(tick, 0); 
-    }
   });
 
   $("#loadmodel").click(function(){
@@ -417,9 +354,6 @@ $(function() {
 </head>
 
 <body>
-<a href="https://github.com/karpathy/recurrentjs"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"></a>
-
-
 <div id="wrap">
   <div>
     <textarea style="width:100%; height:200px;" id="ti">
@@ -430,25 +364,12 @@ Source data goes here.
 
   <div class="hh">Controls/Options:</div>
   <button id="learn" class="abutton">learn/restart</button>
-  <button id="resume" class="abutton">resume</button>
-  <button id="stop" class="abutton">pause</button>
-  <!-- <button id="gradcheck">gradcheck</button> -->
   protip: if your perplexity is exploding with Infinity try lowering the initial learning rate
   <br>
   <div id="status">
 
     <div>
       <div class="hh">Training stats:</div>
-      <div class="aslider">
-        <div class="slider_header">Learning rate: you want to anneal this over time if you're training for longer time.</div>
-        <div class="theslider" id="lr_slider"></div>
-        <div class="slider_value" id="lr_text"></div>
-      </div>
-
-      <div id="ticktime"></div>
-      <div id="gradclip"></div>
-      <div id="epoch"></div>
-      <div id="ppl"></div>
 
       <div style="clear:both;"></div>
     </div>
